@@ -75,8 +75,19 @@ def main():
     )
 
     model = UNET(in_channels=3, out_channels=1).to(DEVICE)
-    loss_fn = nn.BCEWithLogitsLoss()
+    loss_fn = nn.BCEWithLogitsLoss() # if you want out_channels = 3, change this to cross entropy loss
+    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
+    train_loader, val_loader = get_loaders(
+        TRAIN_IMG_DIR, TRAIN_MASK_DIR, VAL_IMG_DIR, VAL_MASK_DIR,
+        BATCH_SIZE, train_transform, val_transforms
+    )
+
+    scaler = torch.cude.amp.GradScaler()
+    for epoch in range(NUM_EPOCHS):
+        train_fn(train_loader, model, optimizer, loss_fn, scaler)
+
+        # save model and check accuracy, print some examples
 
 if __name__ == '__main__':
     main()
