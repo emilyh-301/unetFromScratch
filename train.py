@@ -5,7 +5,7 @@ from tqdm import tqdm
 import torch.nn as nn
 import torch.optim as optim
 from model import UNET
-#from utils import ( load_checkpoint, save_checkpoint, get_loaders, check_accuracy, save_predictions_as_imgs )
+from utils import ( load_checkpoint, save_checkpoint, get_loaders, check_accuracy, save_predictions_as_imgs )
 
 # Hyperparams
 LEARNING_RATE = 1e-4
@@ -80,14 +80,34 @@ def main():
 
     train_loader, val_loader = get_loaders(
         TRAIN_IMG_DIR, TRAIN_MASK_DIR, VAL_IMG_DIR, VAL_MASK_DIR,
-        BATCH_SIZE, train_transform, val_transforms
+        BATCH_SIZE, train_transform, val_transforms, NUM_WORKERS, PIN_MEMORY,
     )
 
+    #if LOAD_MODEL:
+    #    load_checkpoint(torch.load("my_checkpoint.pth.tar"))
+
+    #check_accuracy(val_loader, model, device=DEVICE) #Have this if LOAD_MODEL = True
+
     scaler = torch.cude.amp.GradScaler()
+
     for epoch in range(NUM_EPOCHS):
         train_fn(train_loader, model, optimizer, loss_fn, scaler)
 
-        # save model and check accuracy, print some examples
+        # save model
+        checkpoint = {
+            "state_dict": model.state_dict(),
+            "optimizer": optimizer.state_dict(),
+        }
+        save_checkpoint(checkpoint)
+
+        # check accuracy
+        check_accuracy(val_loader, model, device=DEVICE)
+
+        # print some examples to a folder
+        save_predictions_as_imgs(
+            val_loader, model, folder="saved_images/", device=DEVICE
+        )
+
 
 if __name__ == '__main__':
     main()
